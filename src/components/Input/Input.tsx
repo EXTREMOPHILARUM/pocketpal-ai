@@ -15,6 +15,7 @@ import {
   CircularActivityIndicatorProps,
   SendButton,
   StopButton,
+  ContinueButton,
 } from '..';
 
 export interface InputTopLevelProps {
@@ -29,7 +30,9 @@ export interface InputTopLevelProps {
    * be transformed to {@link MessageType.Text} and added to the messages list. */
   onSendPress: (message: MessageType.PartialText) => void;
   onStopPress?: () => void;
+  onContinuePress?: () => void;
   isStopVisible?: boolean;
+  stopped_eos?: number;
   /** Controls the visibility behavior of the {@link SendButton} based on the
    * `TextInput` state. Defaults to `editing`. */
   sendButtonVisibilityMode?: 'always' | 'editing';
@@ -52,7 +55,9 @@ export const Input = ({
   onAttachmentPress,
   onSendPress,
   onStopPress,
+  onContinuePress,
   isStopVisible,
+  stopped_eos,
   sendButtonVisibilityMode,
   textInputProps,
 }: InputProps) => {
@@ -119,6 +124,10 @@ export const Input = ({
         <SendButton onPress={handleSend} />
       ) : null}
       {isStopVisible && <StopButton onPress={onStopPress} />}
+      <ContinueButton
+        onPress={onContinuePress ?? (() => {})}
+        visible={stopped_eos !== 1 && !!onContinuePress}
+      />
     </View>
   );
 };

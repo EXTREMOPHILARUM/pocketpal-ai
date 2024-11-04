@@ -126,6 +126,7 @@ export const ChatView = ({
   onPreviewDataFetched,
   onSendPress,
   onStopPress,
+  onContinuePress,
   renderBubble,
   renderCustomMessage,
   renderFileMessage,
@@ -138,6 +139,7 @@ export const ChatView = ({
   timeFormat,
   usePreviewData = true,
   user,
+  stopped_eos,
 }: ChatProps) => {
   const theme = useTheme();
 
@@ -431,7 +433,9 @@ export const ChatView = ({
                   onAttachmentPress,
                   onSendPress,
                   onStopPress,
+                  onContinuePress,
                   isStopVisible,
+                  stopped_eos,
                   renderScrollable,
                   sendButtonVisibilityMode,
                   textInputProps,

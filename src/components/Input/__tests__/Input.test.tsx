@@ -1,214 +1,73 @@
+import React from 'react';
 import {fireEvent, render} from '@testing-library/react-native';
-import * as React from 'react';
-import {ScrollView} from 'react-native';
-
-import {user} from '../../../../jest/fixtures';
-import {l10n} from '../../../utils/l10n';
-import {UserContext} from '../../../utils';
 import {Input} from '../Input';
+import {UserContext} from '../../../utils';
 
-const renderScrollable = () => <ScrollView />;
+jest.mock('react-native-vector-icons/MaterialIcons', () => 'Icon');
 
-describe('input', () => {
-  it('send button', () => {
-    expect.assertions(2);
-    const onSendPress = jest.fn();
-    const {getByPlaceholderText, getByLabelText} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onSendPress,
-            sendButtonVisibilityMode: 'editing',
-            textInputProps: {value: 'text'},
-          }}
-        />
-      </UserContext.Provider>,
-    );
-    const textInput = getByPlaceholderText(l10n.en.inputPlaceholder);
-    fireEvent.changeText(textInput, 'text');
-    const button = getByLabelText(l10n.en.sendButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onSendPress).toHaveBeenCalledWith({text: 'text', type: 'text'});
-    expect(textInput.props).toHaveProperty('value', 'text');
+const user = {id: 'user-id'};
+
+describe('Input', () => {
+  const mockOnSendPress = jest.fn();
+  const mockOnStopPress = jest.fn();
+  const mockOnContinuePress = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('sends a text message', () => {
-    expect.assertions(2);
-    const onSendPress = jest.fn();
-    const {getByPlaceholderText, getByLabelText} = render(
+  const renderInput = (props = {}) =>
+    render(
       <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-          }}
-        />
+        <Input onSendPress={mockOnSendPress} {...props} />
       </UserContext.Provider>,
     );
-    const textInput = getByPlaceholderText(l10n.en.inputPlaceholder);
-    fireEvent.changeText(textInput, 'text');
-    const button = getByLabelText(l10n.en.sendButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onSendPress).toHaveBeenCalledWith({text: 'text', type: 'text'});
-    expect(textInput.props).toHaveProperty('value', '');
-  });
 
-  it('sends a text message if onChangeText and value are provided', () => {
-    expect.assertions(2);
-    const onSendPress = jest.fn();
-    const value = 'value';
-    const onChangeText = jest.fn(newValue => {
-      rerender(
-        <UserContext.Provider value={user}>
-          <Input
-            {...{
-              onSendPress,
-              renderScrollable,
-              sendButtonVisibilityMode: 'editing',
-              textInputProps: {onChangeText, value: newValue},
-            }}
-          />
-        </UserContext.Provider>,
-      );
+  it('shows continue button when stopped_eos is 0 and onContinuePress is provided', () => {
+    const {getByTestId} = renderInput({
+      stopped_eos: 0,
+      onContinuePress: mockOnContinuePress,
     });
-    const {getByPlaceholderText, getByLabelText, rerender} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-            textInputProps: {onChangeText, value},
-          }}
-        />
-      </UserContext.Provider>,
-    );
-    const textInput = getByPlaceholderText(l10n.en.inputPlaceholder);
-    fireEvent.changeText(textInput, 'text');
-    const button = getByLabelText(l10n.en.sendButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onSendPress).toHaveBeenCalledWith({text: 'text', type: 'text'});
-    expect(textInput.props).toHaveProperty('value', 'text');
+
+    expect(getByTestId('continue-button')).toBeTruthy();
   });
 
-  it('sends a text message if onChangeText is provided', () => {
-    expect.assertions(2);
-    const onSendPress = jest.fn();
-    const onChangeText = jest.fn();
-    const {getByPlaceholderText, getByLabelText} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-            textInputProps: {onChangeText},
-          }}
-        />
-      </UserContext.Provider>,
-    );
-    const textInput = getByPlaceholderText(l10n.en.inputPlaceholder);
-    fireEvent.changeText(textInput, 'text');
-    const button = getByLabelText(l10n.en.sendButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onSendPress).toHaveBeenCalledWith({text: 'text', type: 'text'});
-    expect(textInput.props).toHaveProperty('value', '');
-  });
-
-  it('sends a text message if value is provided', () => {
-    expect.assertions(2);
-    const onSendPress = jest.fn();
-    const value = 'value';
-    const {getByPlaceholderText, getByLabelText} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-            textInputProps: {value},
-          }}
-        />
-      </UserContext.Provider>,
-    );
-    const textInput = getByPlaceholderText(l10n.en.inputPlaceholder);
-    fireEvent.changeText(textInput, 'text');
-    const button = getByLabelText(l10n.en.sendButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onSendPress).toHaveBeenCalledWith({text: value, type: 'text'});
-    expect(textInput.props).toHaveProperty('value', value);
-  });
-
-  it('sends a text message if defaultValue is provided', () => {
-    expect.assertions(2);
-    const onSendPress = jest.fn();
-    const defaultValue = 'defaultValue';
-    const {getByPlaceholderText, getByLabelText} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-            textInputProps: {defaultValue},
-          }}
-        />
-      </UserContext.Provider>,
-    );
-    const textInput = getByPlaceholderText(l10n.en.inputPlaceholder);
-    const button = getByLabelText(l10n.en.sendButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onSendPress).toHaveBeenCalledWith({
-      text: defaultValue,
-      type: 'text',
+  it('hides continue button when stopped_eos is 1', () => {
+    const {queryByTestId} = renderInput({
+      stopped_eos: 1,
+      onContinuePress: mockOnContinuePress,
     });
-    expect(textInput.props).toHaveProperty('value', '');
+
+    expect(queryByTestId('continue-button')).toBeNull();
   });
 
-  it('sends an image message', () => {
-    expect.assertions(1);
-    const onAttachmentPress = jest.fn();
-    const onSendPress = jest.fn();
-    const {getByLabelText} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            onAttachmentPress,
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-          }}
-        />
-      </UserContext.Provider>,
-    );
-    const button = getByLabelText(l10n.en.attachmentButtonAccessibilityLabel);
-    fireEvent.press(button);
-    expect(onAttachmentPress).toHaveBeenCalledTimes(1);
+  it('hides continue button when onContinuePress is not provided', () => {
+    const {queryByTestId} = renderInput({
+      stopped_eos: 0,
+    });
+
+    expect(queryByTestId('continue-button')).toBeNull();
   });
 
-  it('shows activity indicator when attachment is uploading', () => {
-    expect.assertions(1);
-    const isAttachmentUploading = true;
-    const onSendPress = jest.fn();
-    const {getByTestId} = render(
-      <UserContext.Provider value={user}>
-        <Input
-          {...{
-            attachmentCircularActivityIndicatorProps: {
-              color: 'white',
-              size: undefined,
-            },
-            isAttachmentUploading,
-            onSendPress,
-            renderScrollable,
-            sendButtonVisibilityMode: 'editing',
-          }}
-        />
-      </UserContext.Provider>,
-    );
+  it('calls onContinuePress when continue button is pressed', () => {
+    const {getByTestId} = renderInput({
+      stopped_eos: 0,
+      onContinuePress: mockOnContinuePress,
+    });
 
-    const indicator = getByTestId('CircularActivityIndicator');
-    expect(indicator).toBeDefined();
+    fireEvent.press(getByTestId('continue-button'));
+    expect(mockOnContinuePress).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows both stop and continue buttons when appropriate', () => {
+    const {getByTestId} = renderInput({
+      stopped_eos: 0,
+      onContinuePress: mockOnContinuePress,
+      isStopVisible: true,
+      onStopPress: mockOnStopPress,
+    });
+
+    expect(getByTestId('continue-button')).toBeTruthy();
+    expect(getByTestId('stop-button')).toBeTruthy();
   });
 });

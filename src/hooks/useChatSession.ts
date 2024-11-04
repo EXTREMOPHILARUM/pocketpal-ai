@@ -1,4 +1,4 @@
-import React, {useRef, useCallback, useState} from 'react';
+import React, {useRef, useCallback, useState, useEffect} from 'react';
 
 import {toJS} from 'mobx';
 import {LlamaContext} from '@pocketpalai/llama.rn';
@@ -22,8 +22,22 @@ export const useChatSession = (
   assistant: User,
 ) => {
   const [inferencing, setInferencing] = useState<boolean>(false);
+  const [stopped_eos, setStopped_eos] = useState<number>(1);
   const l10n = React.useContext(L10nContext);
   const conversationIdRef = useRef<string>(randId());
+  const lastPromptRef = useRef<string>('');
+
+  // Initialize stopped_eos from the last message's metadata
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[0];
+      if (lastMessage.type === 'text') {
+        setStopped_eos(lastMessage.metadata?.stopped_eos ?? 1);
+      }
+    } else {
+      setStopped_eos(1);
+    }
+  }, [messages]);
 
   // We needed this to avoid excessive ui updates. Unsure if this is the best way to do it.
   const tokenBufferRef = useRef<string>(''); // Token buffer to accumulate tokens
@@ -69,6 +83,20 @@ export const useChatSession = (
     addMessage(textMessage);
   };
 
+  const buildChatMessages = () => {
+    return [
+      ...(modelStore.activeModel?.chatTemplate?.systemPrompt
+        ? [
+            {
+              role: 'system' as 'system',
+              content: modelStore.activeModel.chatTemplate.systemPrompt,
+            },
+          ]
+        : []),
+      ...convertToChatMessages(messages),
+    ];
+  };
+
   const handleSendPress = async (message: MessageType.PartialText) => {
     if (!context) {
       addSystemMessage(l10n.modelNotLoaded);
@@ -89,26 +117,88 @@ export const useChatSession = (
     };
     addMessage(textMessage);
     setInferencing(true);
+    setStopped_eos(1); // Reset stopped_eos when starting new message
 
     const id = randId();
     const createdAt = Date.now();
     currentMessageInfo.current = {createdAt, id};
 
     const chatMessages = [
-      ...(modelStore.activeModel?.chatTemplate?.systemPrompt
-        ? [
-            {
-              role: 'system' as 'system',
-              content: modelStore.activeModel.chatTemplate.systemPrompt,
-            },
-          ]
-        : []),
-      ...convertToChatMessages([
-        textMessage,
-        ...messages.filter(msg => msg.id !== textMessage.id),
-      ]),
+      ...buildChatMessages(),
+      {
+        role: 'user' as 'user',
+        content: message.text,
+      },
     ];
 
+    const prompt = await applyChatTemplate(
+      chatMessages,
+      modelStore.activeModel ?? null,
+      context,
+    );
+    lastPromptRef.current = prompt;
+
+    const completionParams = toJS(modelStore.activeModel?.completionSettings);
+
+    try {
+      const result = await context.completion(
+        {...completionParams, prompt},
+        data => {
+          if (data.token && currentMessageInfo.current) {
+            tokenBufferRef.current += data.token;
+            throttledFlushTokenBuffer(
+              currentMessageInfo.current.createdAt,
+              currentMessageInfo.current.id,
+            );
+          }
+        },
+      );
+
+      if (
+        currentMessageInfo.current?.createdAt &&
+        currentMessageInfo.current?.id
+      ) {
+        flushTokenBuffer(
+          currentMessageInfo.current.createdAt,
+          currentMessageInfo.current.id,
+        );
+      }
+
+      console.log('result: ', result);
+      const newStopped_eos = result.stopped_eos ? 1 : 0;
+      setStopped_eos(newStopped_eos);
+      chatSessionStore.updateMessage(id, {
+        metadata: {
+          timings: result.timings,
+          copyable: true,
+        },
+      });
+      setInferencing(false);
+    } catch (error) {
+      setInferencing(false);
+      setStopped_eos(1); // Reset on error
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('network')) {
+        addSystemMessage(l10n.networkError);
+      } else {
+        addSystemMessage(`Completion failed: ${errorMessage}`);
+      }
+    }
+  };
+
+  const handleContinuePress = async () => {
+    if (!context) {
+      return;
+    }
+
+    setInferencing(true);
+    setStopped_eos(1); // Reset stopped_eos when continuing
+    const id = randId();
+    const createdAt = Date.now();
+    currentMessageInfo.current = {createdAt, id};
+
+    // Build chat messages with full context
+    const chatMessages = buildChatMessages();
     const prompt = await applyChatTemplate(
       chatMessages,
       modelStore.activeModel ?? null,
@@ -123,7 +213,6 @@ export const useChatSession = (
         data => {
           if (data.token && currentMessageInfo.current) {
             tokenBufferRef.current += data.token;
-            // Avoid variable shadowing by using properties directly
             throttledFlushTokenBuffer(
               currentMessageInfo.current.createdAt,
               currentMessageInfo.current.id,
@@ -132,7 +221,6 @@ export const useChatSession = (
         },
       );
 
-      // Flush any remaining tokens after completion
       if (
         currentMessageInfo.current?.createdAt &&
         currentMessageInfo.current?.id
@@ -143,20 +231,20 @@ export const useChatSession = (
         );
       }
 
-      console.log('result: ', result);
+      const newStopped_eos = result.stopped_eos ? 1 : 0;
+      setStopped_eos(newStopped_eos);
       chatSessionStore.updateMessage(id, {
-        metadata: {timings: result.timings, copyable: true},
+        metadata: {
+          timings: result.timings,
+          copyable: true,
+        },
       });
       setInferencing(false);
     } catch (error) {
       setInferencing(false);
+      setStopped_eos(1); // Reset on error
       const errorMessage = (error as Error).message;
-      if (errorMessage.includes('network')) {
-        // TODO: This can be removed. We don't use network for chat.
-        addSystemMessage(l10n.networkError);
-      } else {
-        addSystemMessage(`Completion failed: ${errorMessage}`);
-      }
+      addSystemMessage(`Continuation failed: ${errorMessage}`);
     }
   };
 
@@ -168,6 +256,7 @@ export const useChatSession = (
   const handleStopPress = () => {
     if (inferencing && context) {
       context.stopCompletion();
+      setStopped_eos(0); // Set to 0 when manually stopping
     }
     if (
       currentMessageInfo.current?.createdAt &&
@@ -184,6 +273,8 @@ export const useChatSession = (
     handleSendPress,
     handleResetConversation,
     handleStopPress,
+    handleContinuePress,
     inferencing,
+    stopped_eos,
   };
 };

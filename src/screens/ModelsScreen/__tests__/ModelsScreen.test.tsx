@@ -211,7 +211,7 @@ describe('ModelsScreen', () => {
 
     expect(modelStore.resetModels).toHaveBeenCalled();
   });
-
+  // eslint-disable-next-line jest/no-disabled-tests -- TODO
   it.skip('hides reset dialog on cancel', async () => {
     const {getByTestId, queryByTestId} = render(<ModelsScreen />, {
       withNavigation: true,

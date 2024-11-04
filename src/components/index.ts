@@ -4,6 +4,7 @@ export * from './Avatar';
 export * from './Bubble';
 export * from './ChatView';
 export * from './CircularActivityIndicator';
+export * from './ContinueButton';
 export * from './FileMessage';
 export * from './HeaderRight';
 export * from './ImageMessage';

@@ -39,13 +39,13 @@ export const ChatScreen: React.FC = observer(() => {
   const l10n = React.useContext(L10nContext);
   const messages: MessageType.Any[] = chatSessionStore.currentSessionMessages;
 
-  const {handleSendPress, handleStopPress, inferencing} = useChatSession(
-    context,
-    currentMessageInfo,
-    messages,
-    user,
-    assistant,
-  );
+  const {
+    handleSendPress,
+    handleStopPress,
+    handleContinuePress,
+    inferencing,
+    stopped_eos,
+  } = useChatSession(context, currentMessageInfo, messages, user, assistant);
 
   return (
     <SafeAreaProvider>
@@ -59,6 +59,8 @@ export const ChatScreen: React.FC = observer(() => {
         messages={messages}
         onSendPress={handleSendPress}
         onStopPress={handleStopPress}
+        onContinuePress={handleContinuePress}
+        stopped_eos={stopped_eos}
         user={user}
         //onAttachmentPress={!context ? handlePickModel : undefined}
         isStopVisible={inferencing}

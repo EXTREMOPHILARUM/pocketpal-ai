@@ -13,6 +13,7 @@ interface SessionMetaData {
   title: string;
   date: string;
   messages: MessageType.Any[];
+  lastPrompt?: string;
 }
 
 interface SessionGroup {
@@ -39,37 +40,6 @@ class ChatSessionStore {
       console.error('Failed to load session list:', error);
     }
   }
-
-  /*async saveSession(
-    context: any,
-    sessionData: string,
-    title: string,
-  ): Promise<void> {
-    const id = new Date().toISOString();
-    const sessionFile = `${FileSystem.DocumentDirectoryPath}/${id}.llama-session.bin`;
-    const metaData: SessionMetaData = {id, title, date: id, messages};
-
-    try {
-      await context.saveSession(sessionFile); // Using context method
-      this.sessions.push(metaData);
-      await FileSystem.writeFile(
-        `${FileSystem.DocumentDirectoryPath}/session-metadata.json`,
-        JSON.stringify(this.sessions),
-      );
-    } catch (error) {
-      console.error('Failed to save session:', error);
-    }
-  }
-
-  async loadSession(context: any, id: string): Promise<string> {
-    const sessionFile = `${FileSystem.DocumentDirectoryPath}/${id}.llama-session.bin`;
-    try {
-      await context.loadSession(sessionFile); // Using context method
-      return `Session ${id} loaded successfully.`;
-    } catch (error) {
-      return `Failed to load session: ${error}`;
-    }
-  }*/
 
   async deleteSession(id: string): Promise<void> {
     try {
@@ -147,6 +117,26 @@ class ChatSessionStore {
       }
     }
     return [];
+  }
+
+  get currentSessionLastPrompt(): string | undefined {
+    if (this.activeSessionId) {
+      const session = this.sessions.find(s => s.id === this.activeSessionId);
+      return session?.lastPrompt;
+    }
+    return undefined;
+  }
+
+  setCurrentSessionLastPrompt(prompt: string): void {
+    if (this.activeSessionId) {
+      const session = this.sessions.find(s => s.id === this.activeSessionId);
+      if (session) {
+        runInAction(() => {
+          session.lastPrompt = prompt;
+          this.saveSessionsMetadata();
+        });
+      }
+    }
   }
 
   async saveSessionsMetadata(): Promise<void> {
