@@ -61,7 +61,6 @@ describe('useChatSession', () => {
       await result.current.handleSendPress(textMessage);
     });
 
-    // TODO: fix this test:         "text": "Model not loaded. Please initialize the model.",
     expect(chatSessionStore.addMessageToCurrentSession).toHaveBeenCalledWith({
       author: assistant,
       createdAt: expect.any(Number),
@@ -111,7 +110,7 @@ describe('useChatSession', () => {
           onData({token: 'Hello'});
           onData({token: ', '});
           onData({token: 'world!'});
-          return Promise.resolve({timings: timings, usage: {}});
+          return Promise.resolve({timings: timings, usage: {}, stopped_eos: 1});
         });
     }
 
@@ -143,17 +142,24 @@ describe('useChatSession', () => {
       chatSessionStore.updateMessageToken as jest.Mock
     ).mock.calls
       .map(call => call[0].token)
-      .join(''); // Concatenate tokens
+      .join('');
 
     expect(concatenatedTokens).toEqual('Hello, world!');
 
-    const expectedMetadata = {timings: timings, copyable: true};
+    const expectedMetadata = {
+      timings: timings,
+      copyable: true,
+      stopped_eos: 1,
+    };
 
     const matchingCall = (
       chatSessionStore.updateMessage as jest.Mock
     ).mock.calls.find(
       ([, {metadata}]) =>
-        metadata && metadata.timings && metadata.copyable === true,
+        metadata &&
+        metadata.timings &&
+        metadata.copyable === true &&
+        metadata.stopped_eos === 1,
     );
 
     expect(matchingCall).toBeDefined();
@@ -229,7 +235,7 @@ describe('useChatSession', () => {
     expect(result.current.inferencing).toBe(true);
 
     await act(async () => {
-      resolveCompletion!({timings: {total: 100}, usage: {}});
+      resolveCompletion!({timings: {total: 100}, usage: {}, stopped_eos: 1});
       await sendPromise;
     });
     expect(result.current.inferencing).toBe(false);
