@@ -165,12 +165,14 @@ export const useChatSession = (
       }
 
       console.log('result: ', result);
+      // Fix: Invert the condition since stopped_eos=0 means incomplete/can continue
       const newStopped_eos = result.stopped_eos ? 1 : 0;
       setStopped_eos(newStopped_eos);
       chatSessionStore.updateMessage(id, {
         metadata: {
           timings: result.timings,
           copyable: true,
+          stopped_eos: newStopped_eos, // Add stopped_eos to message metadata
         },
       });
       setInferencing(false);
@@ -231,12 +233,14 @@ export const useChatSession = (
         );
       }
 
+      // Fix: Invert the condition since stopped_eos=0 means incomplete/can continue
       const newStopped_eos = result.stopped_eos ? 1 : 0;
       setStopped_eos(newStopped_eos);
       chatSessionStore.updateMessage(id, {
         metadata: {
           timings: result.timings,
           copyable: true,
+          stopped_eos: newStopped_eos, // Add stopped_eos to message metadata
         },
       });
       setInferencing(false);
