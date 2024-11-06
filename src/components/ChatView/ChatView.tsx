@@ -17,6 +17,7 @@ import {oneOf} from '@flyerhq/react-native-link-preview';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {useComponentSize} from '../KeyboardAccessoryView/hooks';
+import {LoadingBubble} from '../LoadingBubble';
 
 import {usePrevious, useTheme} from '../../hooks';
 
@@ -81,6 +82,10 @@ export interface ChatProps extends ChatTopLevelProps {
    * When true, indicates that there are no more pages to load and
    * pagination will not be triggered. */
   isLastPage?: boolean;
+  /** Indicates if the AI is currently thinking (processing but not yet streaming) */
+  isThinking?: boolean;
+  /** Indicates if the AI is currently typing (actively streaming tokens) */
+  isTyping?: boolean;
   /** Override the default localized copy. */
   l10nOverride?: Partial<
     Record<keyof (typeof l10n)[keyof typeof l10n], string>
@@ -116,6 +121,8 @@ export const ChatView = ({
   isAttachmentUploading,
   isLastPage,
   isStopVisible,
+  isThinking = false,
+  isTyping = false,
   l10nOverride,
   locale = 'en',
   messages,
@@ -149,7 +156,6 @@ export const ChatView = ({
     flatListContentContainer,
     footer,
     footerLoadingPage,
-    header,
     keyboardAccessoryView,
   } = styles({theme});
 
@@ -374,8 +380,7 @@ export const ChatView = ({
         initialNumToRender={10}
         ListEmptyComponent={renderListEmptyComponent}
         ListFooterComponent={renderListFooterComponent}
-        ListHeaderComponent={<View />}
-        ListHeaderComponentStyle={header}
+        ListHeaderComponent={isThinking ? <LoadingBubble /> : null}
         maxToRenderPerBatch={6}
         onEndReachedThreshold={0.75}
         style={flatList}
@@ -397,8 +402,9 @@ export const ChatView = ({
       flatListContentContainer,
       flatListProps,
       handleEndReached,
-      header,
       insets.bottom,
+      isThinking,
+      isTyping,
       keyExtractor,
       renderItem,
       renderListEmptyComponent,

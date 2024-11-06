@@ -4,7 +4,6 @@ import {observer} from 'mobx-react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 
 import {Bubble, ChatView} from '../../components';
-import {LoadingBubble} from '../../components/LoadingBubble';
 
 import {useChatSession} from '../../hooks';
 
@@ -25,10 +24,6 @@ const renderBubble = ({
   message: MessageType.Any;
   nextMessageInGroup: boolean;
 }) => {
-  // Check for our special loading message
-  if (message.id === 'loading-indicator') {
-    return <LoadingBubble />;
-  }
   return (
     <Bubble
       child={child}
@@ -44,27 +39,13 @@ export const ChatScreen: React.FC = observer(() => {
     null,
   );
   const l10n = React.useContext(L10nContext);
-  const baseMessages: MessageType.Any[] =
-    chatSessionStore.currentSessionMessages;
+  const messages = chatSessionStore.currentSessionMessages;
 
   const {handleSendPress, handleStopPress, inferencing, isStreaming} =
-    useChatSession(context, currentMessageInfo, baseMessages, user, assistant);
+    useChatSession(context, currentMessageInfo, messages, user, assistant);
 
-  // Add loading message if inferencing but not yet streaming
-  const messages = React.useMemo(() => {
-    if (!inferencing || isStreaming) {
-      return baseMessages;
-    }
-    return [
-      {
-        id: 'loading-indicator',
-        type: 'text',
-        text: '',
-        author: assistant,
-      } as MessageType.Text,
-      ...baseMessages,
-    ];
-  }, [baseMessages, inferencing, isStreaming]);
+  // Show loading bubble only during the thinking phase (inferencing but not streaming)
+  const isThinking = inferencing && !isStreaming;
 
   return (
     <SafeAreaProvider>
@@ -80,9 +61,10 @@ export const ChatScreen: React.FC = observer(() => {
         onStopPress={handleStopPress}
         user={user}
         isStopVisible={inferencing}
+        isThinking={isThinking}
+        sendButtonVisibilityMode={inferencing ? undefined : 'editing'}
         textInputProps={{
-          editable: !!context && !inferencing,
-          value: inferencing ? '' : undefined,
+          editable: !!context,
           placeholder: !context
             ? modelStore.isContextLoading
               ? l10n.loadingModel

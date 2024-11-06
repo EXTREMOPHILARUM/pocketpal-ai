@@ -1,9 +1,15 @@
 import React, {useEffect, useRef} from 'react';
-import {View, Animated, StyleSheet} from 'react-native';
+import {View, Animated} from 'react-native';
 import {useTheme} from '../../hooks';
 import {Theme} from '../../utils/types';
+import {styles} from './styles';
 
-const LoadingDot = ({delay, theme}: {delay: number; theme: Theme}) => {
+interface LoadingDotProps {
+  delay: number;
+  theme: Theme;
+}
+
+const LoadingDot: React.FC<LoadingDotProps> = ({delay, theme}) => {
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -37,7 +43,7 @@ const LoadingDot = ({delay, theme}: {delay: number; theme: Theme}) => {
   );
 };
 
-export const LoadingBubble = () => {
+export const LoadingBubble: React.FC = () => {
   const theme = useTheme();
 
   return (
@@ -52,20 +58,3 @@ export const LoadingBubble = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    padding: 12,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-    marginVertical: 4,
-    marginHorizontal: 8,
-    gap: 4,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-});
